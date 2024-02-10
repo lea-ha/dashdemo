@@ -16,6 +16,7 @@ df['Gross'] = df['Gross'].str.replace('M', '0').str.replace('$', '').astype(floa
 df['Votes'] = df['Votes'].str.replace(',', '')
 df['Votes'] = pd.to_numeric(df['Votes'])
 
+
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css','https://cdn.jsdelivr.net/npm/water.css@2/out/water.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
 
@@ -30,7 +31,20 @@ app.layout= html.Div([
             value=df['Year of Release'].min(),
             marks={str(year): str(year) for year in range(1930, 2024, 5)},
             id='year-slider'
-    )
+    ),
+    html.Div(id='description-output')
+    ]),
+    html.Div([
+        html.H1('Global Statistics'),
+         dcc.Dropdown(
+        id='dropdown',
+        options=[
+            {'label': 'Frequency of Movies Released Each Year', 'value': 'movies'},
+            {'label': 'Frequency of Votes Each Year', 'value': 'votes'}
+        ],
+        value='movies'
+    ),
+    html.Div(id='output-graph'),
     ])
 ])
 @callback(
@@ -51,6 +65,47 @@ def update_figure(selected_year):
     fig.update_layout(transition_duration=500)
 
     return fig
+
+@app.callback(
+    Output(component_id='output-graph', component_property='children'),
+    [Input(component_id='dropdown', component_property='value')]
+)
+def update_graph(selected_value):
+    if selected_value == 'movies':
+        data = df['Year of Release'].value_counts()
+        title = 'Frequency of Movies Released Each Year'
+        y_title = 'Number of Movies Released'
+    elif selected_value == 'votes':
+        data = df.groupby('Year of Release')['Votes'].sum()
+        title = 'Frequency of Votes Each Year'
+        y_title = 'Total Votes'
+    
+    return dcc.Graph(
+        id='movies_years',
+        figure={
+            'data': [
+                {'x': df['Year of Release'], 'y': data, 'type': 'bar'}
+            ],
+            'layout': {
+                'title': title,
+                'xaxis': {'title': 'Year'},
+                'yaxis': {'title': y_title}
+            }
+        }
+    )
+@app.callback(
+    Output('description-output', 'children'),
+    [Input('graph-with-slider', 'hoverData'),Input('year-slider', 'value')]
+)
+def display_description(hoverData, selected_year):
+    if hoverData is not None:
+        point_index = hoverData['points'][0]['pointIndex']
+        filtered_df = df[df['Year of Release'] == selected_year]
+        movie_name = filtered_df.iloc[point_index]['Movie Name']
+        description = filtered_df.iloc[point_index]['Description']
+        return f"Movie: {movie_name}\nDescription: {description}"
+    else:
+        return ""
 
 if __name__ == '__main__':
     app.run(debug=True)
