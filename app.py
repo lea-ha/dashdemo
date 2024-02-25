@@ -45,6 +45,7 @@ app.layout= html.Div([
         value='movies'
     ),
     html.Div(id='output-graph'),
+    html.Div(id='frequency-output'),
     ])
 ])
 @callback(
@@ -66,7 +67,7 @@ def update_figure(selected_year):
 
     return fig
 
-@app.callback(
+@callback(
     Output(component_id='output-graph', component_property='children'),
     [Input(component_id='dropdown', component_property='value')]
 )
@@ -93,19 +94,21 @@ def update_graph(selected_value):
             }
         }
     )
-@app.callback(
+
+
+@callback(
     Output('description-output', 'children'),
-    [Input('graph-with-slider', 'hoverData'),Input('year-slider', 'value')]
+    [Input('graph-with-slider', 'hoverData')]
 )
-def display_description(hoverData, selected_year):
+def display_description(hoverData):
+
     if hoverData is not None:
-        point_index = hoverData['points'][0]['pointIndex']
-        filtered_df = df[df['Year of Release'] == selected_year]
-        movie_name = filtered_df.iloc[point_index]['Movie Name']
-        description = filtered_df.iloc[point_index]['Description']
-        return f"Movie: {movie_name}\nDescription: {description}"
+        hovertext = hoverData['points'][0]['hovertext']
+        description = df.loc[df['Movie Name'] == hovertext, 'Description'].iloc[0]
+        return hovertext,":", description
     else:
         return ""
+   
 
 if __name__ == '__main__':
     app.run(debug=True)
